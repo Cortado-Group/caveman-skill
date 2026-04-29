@@ -57,17 +57,44 @@ Or drop the folder into wherever your project's skills live.
 # Stdout
 python3 scripts/caveman.py path/to/SKILL.md
 
-# Write in place, leave .bak backup
+# Write in place; backup at path/to/SKILL.md.bak
 python3 scripts/caveman.py path/to/SKILL.md -w
 
 # Just the savings report
 python3 scripts/caveman.py path/to/SKILL.md --report
 
+# Validate structure only (no compression)
+python3 scripts/caveman.py path/to/SKILL.md --validate-only
+
 # stdin
 cat SKILL.md | python3 scripts/caveman.py -
 ```
 
-The script reports word counts in/out, percent cut, and a list of *flagged* words it didn't strip — corporate-fluff candidates (`comprehensive`, `robust`, `seamless`, `leverage`, `synergy`, `optimize`, etc.) for the agent to review in context.
+### Intensity modes
+
+```bash
+python3 scripts/caveman.py FILE --lite       # safest subset only
+python3 scripts/caveman.py FILE               # default (recommended)
+python3 scripts/caveman.py FILE --ultra      # most aggressive
+```
+
+| Mode | What it does |
+|---|---|
+| `--lite` | Only verbose phrasings ("in order to" → "to") and doubled hedges. No prose-changing substitutions. |
+| default | Lite + imperative softeners ("Make sure to") + intensifiers ("very/quite/just") + restated context ("As mentioned above") + throat-clearing + trailing politeness. |
+| `--ultra` | Default + auto-strip flagged fluff words (`comprehensive`, `robust`, `leverage`, etc.) + run substitutions on markdown table cell text. |
+
+### Backup convention
+
+Backups use `<name>.<ext>.bak` — e.g. `SKILL.md` → `SKILL.md.bak`. The `.bak` suffix tells every markdown crawler (skill discovery, doc generators, IDEs) to ignore the file. Avoid `.original.md` patterns — those get re-parsed by anything that scans `*.md`.
+
+### Validation
+
+Every compression run validates the output before writing. If the result has unbalanced code fences, unclosed YAML frontmatter, or orphaned table separators, the script refuses to write and exits non-zero. Use `--validate-only` to check input without compressing.
+
+### Flagged words
+
+Outside `--ultra`, the script reports corporate-fluff candidates (`comprehensive`, `robust`, `seamless`, `leverage`, `synergy`, `optimize`, etc.) without stripping them. The agent decides in context.
 
 ## What NOT to compress
 
@@ -103,13 +130,46 @@ locked. Retry if this happens.
 
 Word count: 38 → 21 (45% cut). YAML/code/tables would have been preserved verbatim.
 
+## Tests
+
+32 unit tests in `tests/test_caveman.py`. Stdlib `unittest` (no pytest dep).
+
+```bash
+python3 -m unittest discover tests -v
+```
+
+What's covered:
+- **Preservation invariants** — frontmatter, URLs, file paths, code blocks, headings, table structure survive in all modes
+- **Idempotency** — `cave(cave(x)) == cave(x)` in every mode
+- **Parameterized substitutions** — verify each rule fires (lite vs default-only)
+- **Mode monotonicity** — lite ≥ default ≥ ultra in word count
+- **Structural validation** — detects unbalanced fences, unclosed frontmatter, orphan table separators
+- **Preservation validation** — detects URL loss, heading-count change, bullet-count change between input and output
+- **Edge cases** — empty input, only frontmatter, only code, only tables
+- **CLI integration** — `subprocess` invocations cover stdin, stdout, `-w`, `--report`, `--validate-only`, all three modes, and exit codes
+
+## Evals
+
+Different from unit tests — `evals/measure.py` runs the compressor across a corpus of representative skill files in `evals/corpus/` and reports per-file + aggregate compression and preservation stats.
+
+```bash
+python3 evals/measure.py            # human-readable
+python3 evals/measure.py --json     # machine-readable
+python3 evals/measure.py --corpus path/to/your/skills/
+```
+
+Exits non-zero if any file fails structural or preservation checks in any mode — useful as a CI gate.
+
+Bring your own corpus: point `--corpus` at any directory of `.md` skill files. Drop your real (non-secret) skills in there to benchmark on actual content.
+
 ## Contributing
 
-PRs welcome. Three guidelines:
+PRs welcome. Four guidelines:
 
 1. New regex substitutions must be *mechanically safe* — adding noise is worse than leaving verbosity.
 2. Don't add dependencies. Stdlib only.
 3. If in doubt, **flag** the word for review instead of stripping it.
+4. New rules need a corresponding test case in `tests/test_caveman.py`. The eval suite + unit tests must pass.
 
 ## License
 
