@@ -2,24 +2,28 @@
 
 A lean Claude Code skill that compresses agent-targeted text — skills, prompts, instructions — by stripping mechanical-safe verbosity. Procedural prose only; not for human-facing copy.
 
-## Credit where it's due
+## Prior art
 
-Inspired by [**JuliusBrussee/caveman**](https://github.com/JuliusBrussee/caveman) — the original "talk like caveman" Claude/Codex/Cursor/Windsurf token-saving toolkit. If you want a full multi-agent installation framework with hooks, evals, memory compression (`cavemem`), and intensity modes (lite / full / ultra / 文言文), use that one.
+Several "caveman speak" projects already exist. We borrowed the idea — the differentiator here is one specific use case (compressing skill files) and one specific implementation choice (deterministic script + judgment pass + flag-don't-strip on fluff candidates).
 
-This repo is a **smaller cousin** focused on one thing: compressing skill files (`SKILL.md` + `references/*.md`) for Claude Code skill libraries. We pulled out the techniques that mattered for our use case and left the rest.
-
-## How this differs from the original
-
-| | JuliusBrussee/caveman | this repo |
+| Project | Approach | Notes |
 |---|---|---|
-| Scope | Multi-agent (Claude / Codex / Cursor / Cline / Windsurf / Gemini) | Claude Code skills only |
-| Components | `cavekit`, `caveman`, `cavemem`, hooks, evals, plugins | One Python script + one SKILL.md |
-| Modes | lite / full / ultra / 文言文 | One mode |
-| Memory compression | Yes (`cavemem`) | No |
-| Auto-activation | Hooks + plugin install | Manual or skill-triggered |
-| Install | `bash install.sh` or plugin manager | `git clone`, drop folder into skills dir |
-| Files | Dozens | 5 |
-| Deps | Python + JS + PowerShell + Shell | Python stdlib only |
+| [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) | Multi-agent toolkit (`cavekit` + `caveman` + `cavemem`) with Python compressor, hooks, evals, intensity modes (lite / full / ultra / 文言文). Targets Claude / Codex / Cursor / Cline / Windsurf / Gemini. | The most complete project. Use this if you want the full framework. ~46% reported compression. |
+| [om-patel5/Caveman-Claude](https://github.com/om-patel5/Caveman-Claude) | "Token optimization layer" — Solidity-bridged framework with prompts. | 109 stars. Mostly prompt-based. |
+| [amanattar/caveman-claude-skill](https://github.com/amanattar/caveman-claude-skill) | Single-file Claude skill. Six intensity modes. Pure prompt, no scripts. | Cleanest skill-shaped distribution; closest in spirit to ours, but no deterministic pass. |
+
+## How this differs
+
+| | This repo | The above |
+|---|---|---|
+| Scope | Compressing skill files (`SKILL.md` + `references/*.md`) | General agent output / memory / multi-agent |
+| Determinism | Deterministic regex pass + judgment pass split | Mostly prompt-only (JuliusBrussee has a Python compressor too) |
+| Frontmatter / code / table preservation | Explicit, regex-protected | Varies |
+| Fluff handling | **Flag, don't strip** — surfaces candidates for the agent to decide in context | Strip aggressively |
+| Modes | One | Several (lite / full / ultra / wenyan) |
+| Files | 5 | Dozens to hundreds |
+| Deps | Python stdlib | Varies (Solidity / JS / PS / Shell mix in some) |
+| Install | `git clone` into skills dir | sh installers, plugin managers, mode flags |
 
 ## What it does
 
@@ -113,4 +117,10 @@ MIT. See [LICENSE](LICENSE).
 
 ## Acknowledgments
 
-- [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) — the original idea, methodology, and proof that this approach works at scale (46% average compression on prose-heavy markdown). Go give it a star.
+The idea — and the proof that "talk like caveman" actually saves tokens at scale — comes from prior work. Star them:
+
+- [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman) — the most complete implementation. Multi-agent, hooks, evals, memory compression, intensity modes. ~46% compression on prose-heavy markdown.
+- [om-patel5/Caveman-Claude](https://github.com/om-patel5/Caveman-Claude) — token-optimization layer with 109 stars, broader Claude ecosystem framing.
+- [amanattar/caveman-claude-skill](https://github.com/amanattar/caveman-claude-skill) — clean single-file skill with multiple intensity modes; closest in shape to this repo.
+
+If you want the full ecosystem, go there. This repo exists for the narrow case of compressing skill files in a Claude Code skills directory with a deterministic-first, flag-don't-strip approach.
